@@ -32,6 +32,7 @@ The goals / steps of this project are the following:
 [large_transform_example]: ./writeup_images/large_transform_example.png "Large Perspective Transformation Example"
 [with_dots_all]: ./writeup_images/with_dots_all.png "Dots showing transformation points"
 [transformed_all]: ./writeup_images/transformed_all.png "All example images transformed"
+[fit_lines]: ./writeup_images/fit_lines.png "fit lines to our points".
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -105,9 +106,28 @@ These values will be mapped to the outside corners of the top down perspective i
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+I identify lane-line pixels and fit them with polynomials in `find_lines.py`.
+We can do this in two way, by sliding a window across the image and by using previous lines.
+ 
+###### Sliding window (`find_lines_with_sliding_window`)
+To identify lines with a sliding window, we first need to decide where to initially place the window and choose parameters for shape.
+We can estimate roughly where the line will be in the image by taking the bottom half and creating a histogram of where on the x-axis
+We split the image in half horizontally as well, because we want to find two lines, one for each lane. 
+Then within each half we will choose our centers based on where most of the active pixels occur. 
+This will show us a lot of where the line is and provide a good starting point.
+Then, once we have a window to start with, we can use all of the active pixels that occur within the window to create a
+new x-value center for the next window up. We continue this process until we slide the window up across the entire image.
+Then once we have a collection of all of the images that have occured within our windows. 
+We can fit a polynomial to all of the pixels we've identified. 
 
-![alt text][image5]
+###### Using prior Lines (`find_lines.find_line_from_prior`) 
+If we have already fit a line in a previous frame, we can use it to identify candidate points for our new lines.
+Because the two images occured in close time proximity, we can assume that the lines should be very close to each other.
+Using this assumption, we can take all the points that occur within a certain distance from our previous line and use them
+as the points for our new line. Once we have the points, we can fit our line in the same way we did before with the sliding window.
+
+
+![fit lines to binary images][fit_lines]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
