@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 import matplotlib.image as mpimg
-from pipeline import Pipeline
 
 N_WINDOWS = 9
 MIN_PX_RESIZE_WINDOW = 50  # Minimum pixels to resize window
@@ -14,46 +13,95 @@ WINDOW_COLOR = (0, 255, 0)
 Window = namedtuple("Window", "y_low y_high x_low x_high")
 
 
-def find_line_from_prior(img, prior_fit):
-    nonzero = img.nonzero()
-    nonzeroy = np.array(nonzero[0])
-    nonzerox = np.array(nonzero[1])
-
-    lane_inds = ((nonzerox > (prior_fit[0] * (nonzeroy ** 2) + prior_fit[1] * nonzeroy + prior_fit[2] - MARGIN)) & (
-        nonzerox < (prior_fit[0] * (nonzeroy ** 2) + prior_fit[1] * nonzeroy + prior_fit[2] + MARGIN)))
-
-    lane_x = nonzerox[lane_inds]
-    lane_y = nonzeroy[lane_inds]
-    new_fit = np.polyfit(lane_y, lane_x, 2)
-
-    ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-    return new_fit[0] * ploty ** 2 + new_fit[1] * ploty + new_fit[2]
+class LaneNotFoundException(Exception):
+    pass
 
 
 def find_lines_with_sliding_window(img):
-    img_height, img_width = img.shape[:2]
+    """ Returns two lane lines by sliding a window across a top down image. """
+    leftx_base, rightx_base = _window_centers(img)
 
-    vertical_center = np.int(img_height / 2)
-    histogram = np.sum(img[vertical_center:, :], axis=0)
     out_img = np.dstack((img, img, img)) * 255
-    midpoint = np.int(histogram.shape[0] / 2)
-    leftx_base = np.argmax(histogram[:midpoint])
-    rightx_base = np.argmax(histogram[midpoint:]) + midpoint
-
-    nonzero = img.nonzero()
-    nonzero_y = np.array(nonzero[0])
-    nonzero_x = np.array(nonzero[1])
-
-    left_lane_indices = slide_window(img, leftx_base, out_img)
-    right_lane_indices = slide_window(img, rightx_base, out_img)
+    left_lane_indices = _slide_window(img, leftx_base, out_img)
+    right_lane_indices = _slide_window(img, rightx_base, out_img)
 
     # Concatenate the arrays of indices
     left_lane_indices = np.concatenate(left_lane_indices)
     right_lane_indices = np.concatenate(right_lane_indices)
 
-    left_fit = fit_poly(nonzero_x, nonzero_y, left_lane_indices)
-    right_fit = fit_poly(nonzero_x, nonzero_y, right_lane_indices)
+    try:
+        left_fit = fit_poly(img, left_lane_indices)
+        right_fit = fit_poly(img, right_lane_indices)
+    except:
+        raise LaneNotFoundException()
     return left_fit, right_fit, out_img
+
+
+def find_line_from_prior(img, previous_line):
+    active_indices = _active_pixels_in_line_margin(img, previous_line, 70)
+    try:
+        new_fit = fit_poly(img, active_indices)
+    except TypeError:
+        raise LaneNotFoundException()
+    return new_fit
+    # ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
+    # return new_fit[0] * ploty ** 2 + new_fit[1] * ploty + new_fit[2]
+
+
+def _active_pixels_in_line_margin(img, line, margin=MARGIN):
+    nonzero = img.nonzero()
+    nonzero_y = np.array(nonzero[0])
+    nonzero_x = np.array(nonzero[1])
+
+    return ((nonzero_x > (line[0] * (nonzero_y ** 2) + line[1] * nonzero_y + line[2] - margin)) & 
+            (nonzero_x < (line[0] * (nonzero_y ** 2) + line[1] * nonzero_y + line[2] + margin)))
+
+
+def _window_centers(img):
+    """ Finds the x locations where we want to start our sliding window.
+    We do this by splitting the window in half and taking the x location with the most
+    active pixels. This is where we believe the line will occur. """
+
+    img_height, img_width = img.shape[:2]
+
+    vertical_center = np.int(img_height / 2)
+    histogram = np.sum(img[vertical_center:, :], axis=0)
+    midpoint = np.int(histogram.shape[0] / 2)
+    leftx_base = np.argmax(histogram[:midpoint])
+    rightx_base = np.argmax(histogram[midpoint:]) + midpoint
+    return leftx_base, rightx_base
+
+
+def _slide_window(img, start_window_center_x, out_img=None):
+    img_height, img_width = img.shape[:2]
+    window_height = np.int(img_height / N_WINDOWS)
+    x_current = start_window_center_x
+    lane_indices = []
+
+    nonzero = img.nonzero()
+    nonzero_y = np.array(nonzero[0])
+    nonzero_x = np.array(nonzero[1])
+
+    for window_ii in range(N_WINDOWS):
+        win_y_low = img_height - (window_ii + 1) * window_height
+        win_y_high = img_height - window_ii * window_height
+        window = Window(
+            y_low=win_y_low,
+            y_high=win_y_high,
+            x_low=x_current - MARGIN,
+            x_high=x_current + MARGIN
+        )
+
+        if out_img is not None:
+            cv2.rectangle(out_img, (window.x_low, window.y_low), (window.x_high, window.y_high), WINDOW_COLOR, 2)
+
+        active_pixel_indices = active_pixels_in_window(window, nonzero_x, nonzero_y)
+        lane_indices.append(active_pixel_indices)
+
+        if len(active_pixel_indices) > MIN_PX_RESIZE_WINDOW:
+            x_current = np.int(np.mean(nonzero_x[active_pixel_indices]))
+
+    return lane_indices
 
 
 def sliding_window(img):
@@ -72,45 +120,37 @@ def sliding_window(img):
     plt.ylim(720, 0)
 
 
-def slide_window(img, start_x, out_img=None):
-    img_height, img_width = img.shape[:2]
-    window_height = np.int(img_height / N_WINDOWS)
-    x_current = start_x
-    lane_indices = []
+def curve_radius(lane_fit):
+    ploty = np.linspace(0, 719, num=720)
+    y_eval = np.max(ploty)
+    return ((1 + (2 * lane_fit[0] * y_eval + lane_fit[1]) ** 2) ** 1.5) / np.absolute(2 * lane_fit[0])
 
-    # TODO: does it actually make a performance different to turn these into numpy arrays?
+
+# def convert_to_meters(x, y):
+#     YM_PER_PIX = 30 / 720  # meters per pixel in y dimension
+#     XM_PER_PIX = 3.7 / 700  # meters per pixel in x dimension
+# 
+#     # Fit new polynomials to x,y in world space
+#     left_fit_cr = np.polyfit(ploty * YM_PER_PIX, leftx * XM_PER_PIX, 2)
+#     right_fit_cr = np.polyfit(ploty * YM_PER_PIX, rightx * XM_PER_PIX, 2)
+#     # Calculate the new radii of curvature
+#     left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * YM_PER_PIX + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+#         2 * left_fit_cr[0])
+#     right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * YM_PER_PIX + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+#         2 * right_fit_cr[0])
+
+
+def active_pixels_in_window(window: Window, nonzero_x, nonzero_y):
+    ys_in_window = (nonzero_y >= window.y_low) & (nonzero_y < window.y_high)
+    xs_in_window = (nonzero_x >= window.x_low) & (nonzero_x < window.x_high)
+    return (ys_in_window & xs_in_window).nonzero()[0]
+
+
+def fit_poly(img, lane_indices) -> np.ndarray:
     nonzero = img.nonzero()
     nonzero_y = np.array(nonzero[0])
     nonzero_x = np.array(nonzero[1])
 
-    for window_ii in range(N_WINDOWS):
-        win_y_low = img_height - (window_ii + 1) * window_height
-        win_y_high = img_height - window_ii * window_height
-        window = Window(
-            y_low=win_y_low,
-            y_high=win_y_high,
-            x_low=x_current - MARGIN,
-            x_high=x_current + MARGIN
-        )
-
-        if out_img is not None:
-            cv2.rectangle(out_img, (window.x_low, window.y_low), (window.x_high, window.y_high), WINDOW_COLOR, 2)
-
-        nonzero_indices = nonzero_indices_in_window(window, nonzero_x, nonzero_y)
-        lane_indices.append(nonzero_indices)
-
-        if len(nonzero_indices) > MIN_PX_RESIZE_WINDOW:
-            x_current = np.int(np.mean(nonzero_x[nonzero_indices]))
-
-    return lane_indices
-
-
-def nonzero_indices_in_window(window: Window, nonzero_x, nonzero_y):
-    return ((nonzero_y >= window.y_low) & (nonzero_y < window.y_high) & (nonzero_x >= window.x_low) & (
-        nonzero_x < window.x_high)).nonzero()[0]
-
-
-def fit_poly(nonzero_x, nonzero_y, lane_indices):
     # Extract left and right line pixel positions
     x_indices = nonzero_x[lane_indices]
     y_indices = nonzero_y[lane_indices]
@@ -119,8 +159,8 @@ def fit_poly(nonzero_x, nonzero_y, lane_indices):
 
 def main():
     img = mpimg.imread('./test_images/straight_lines1.jpg')
-    img = Pipeline().transform(img)
-    sliding_window(img)
+    # img = Pipeline().transform(img)
+    # sliding_window(img)
     pass
 
 
