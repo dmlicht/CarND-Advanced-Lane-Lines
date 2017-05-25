@@ -29,7 +29,7 @@ The goals / steps of this project are the following:
 
 [undistort]: ./writeup_images/distortion_correction_example.png "Distortion Correction Example"
 [thresholding]: ./writeup_images/thresholding.png "Thresholding tuning images"
-[large_transform_example]: ./writeup_images/large_transformation_example "Large Perspective Transformation Example"
+[large_transform_example]: ./writeup_images/large_transform_example.png "Large Perspective Transformation Example"
 [with_dots_all]: ./writeup_images/with_dots_all.png "Dots showing transformation points"
 [transformed_all]: ./writeup_images/transformed_all.png "All example images transformed"
 
@@ -79,8 +79,6 @@ I explored color transformations and threshold parameters in `thresholding.ipynb
 
 In my actual pipeline, I ended up using only saturation without combining the results with any gradients or other color channels, because
 saturation on its own appearing to give the clearest signals. The code that is used in my final pipeline is in `threshold.py`.
-
-![alt text][image3]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
