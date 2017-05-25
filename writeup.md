@@ -156,4 +156,8 @@ Here's my [result video](./output_videos/project_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+One of the biggest challenges I faced in the image was getting good top down binary versions of the images. 
+I had to spend several hours tweaking different thresholds for gradients and saturation and combining them in various ways. 
+In the end I got significantly better results by running the perspective transform **before** I converted the images to binary pixels.
+Doing it in the reverse order produced a lot of noise.
+To continue improving this project I would likely create a more thoughtful management system for tracking and combining the last few lane lines. 
