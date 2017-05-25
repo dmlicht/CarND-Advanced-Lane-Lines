@@ -53,7 +53,7 @@ def _active_pixels_in_line_margin(img, line, margin=MARGIN):
     nonzero_y = np.array(nonzero[0])
     nonzero_x = np.array(nonzero[1])
 
-    return ((nonzero_x > (line[0] * (nonzero_y ** 2) + line[1] * nonzero_y + line[2] - margin)) & 
+    return ((nonzero_x > (line[0] * (nonzero_y ** 2) + line[1] * nonzero_y + line[2] - margin)) &
             (nonzero_x < (line[0] * (nonzero_y ** 2) + line[1] * nonzero_y + line[2] + margin)))
 
 
@@ -120,32 +120,6 @@ def sliding_window(img):
     plt.ylim(720, 0)
 
 
-def curve_radius(lane_fit):
-    ploty = np.linspace(0, 719, num=720)
-    y_eval = np.max(ploty)
-    return ((1 + (2 * lane_fit[0] * y_eval + lane_fit[1]) ** 2) ** 1.5) / np.absolute(2 * lane_fit[0])
-
-
-# def convert_to_meters(x, y):
-#     YM_PER_PIX = 30 / 720  # meters per pixel in y dimension
-#     XM_PER_PIX = 3.7 / 700  # meters per pixel in x dimension
-# 
-#     # Fit new polynomials to x,y in world space
-#     left_fit_cr = np.polyfit(ploty * YM_PER_PIX, leftx * XM_PER_PIX, 2)
-#     right_fit_cr = np.polyfit(ploty * YM_PER_PIX, rightx * XM_PER_PIX, 2)
-#     # Calculate the new radii of curvature
-#     left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * YM_PER_PIX + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
-#         2 * left_fit_cr[0])
-#     right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * YM_PER_PIX + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
-#         2 * right_fit_cr[0])
-
-
-def active_pixels_in_window(window: Window, nonzero_x, nonzero_y):
-    ys_in_window = (nonzero_y >= window.y_low) & (nonzero_y < window.y_high)
-    xs_in_window = (nonzero_x >= window.x_low) & (nonzero_x < window.x_high)
-    return (ys_in_window & xs_in_window).nonzero()[0]
-
-
 def fit_poly(img, lane_indices) -> np.ndarray:
     nonzero = img.nonzero()
     nonzero_y = np.array(nonzero[0])
@@ -155,6 +129,18 @@ def fit_poly(img, lane_indices) -> np.ndarray:
     x_indices = nonzero_x[lane_indices]
     y_indices = nonzero_y[lane_indices]
     return np.polyfit(y_indices, x_indices, 2)
+
+
+def curve_radius(lane_fit):
+    ploty = np.linspace(0, 719, num=720)
+    y_eval = np.max(ploty)
+    return ((1 + (2 * lane_fit[0] * y_eval + lane_fit[1]) ** 2) ** 1.5) / np.absolute(2 * lane_fit[0])
+
+
+def active_pixels_in_window(window: Window, nonzero_x, nonzero_y):
+    ys_in_window = (nonzero_y >= window.y_low) & (nonzero_y < window.y_high)
+    xs_in_window = (nonzero_x >= window.x_low) & (nonzero_x < window.x_high)
+    return (ys_in_window & xs_in_window).nonzero()[0]
 
 
 def main():

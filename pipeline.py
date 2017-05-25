@@ -2,9 +2,9 @@ import cv2
 import numpy as np
 import glob
 from distortion_correction import DistortionCorrection, path_to_image_gen
-from find_lines import find_lines_with_sliding_window, LaneNotFoundException, find_line_from_prior
+from find_lines import find_lines_with_sliding_window, LaneNotFoundException, find_line_from_prior, curve_radius
 from perspective_transform import PerspectiveTransform
-from threshold import threshold
+from threshold import to_binary
 from collections import deque
 
 SATURATION_THRESHOLD = (50, 355)
@@ -23,22 +23,33 @@ class Pipeline:
 
     def highlight_lane(self, forward_view_img: np.ndarray) -> np.ndarray:
         distortion_corrected = self._distortion_correction.transform(forward_view_img)
-        forward_view_edges = threshold(distortion_corrected, thresh=SATURATION_THRESHOLD)
-        top_down = self._perspective_transform.transform(forward_view_edges)
+        top_down = self._perspective_transform.transform(distortion_corrected)
+        top_down_edges = to_binary(top_down)
 
         try:
-            left_fit, right_fit, _ = find_lines_with_sliding_window(top_down)
+            left_fit, right_fit, _ = find_lines_with_sliding_window(top_down_edges)
         except LaneNotFoundException:
             return distortion_corrected
-        top_down_lane_highlight = color_between_lines(top_down.shape, left_fit, right_fit)
+        top_down_lane_highlight = color_between_lines(top_down_edges.shape, left_fit, right_fit)
 
         forward_view_lane_highlight = self._perspective_transform.inverse_transform(top_down_lane_highlight)
         return cv2.addWeighted(distortion_corrected, 1, forward_view_lane_highlight, 0.3, 0)
 
     def show_top_down(self, forward_view_img: np.ndarray) -> np.ndarray:
         distortion_corrected = self._distortion_correction.transform(forward_view_img)
-        forward_view_edges = threshold(distortion_corrected, thresh=SATURATION_THRESHOLD)
-        return self._perspective_transform.transform(forward_view_edges)
+        top_down = self._perspective_transform.transform(distortion_corrected)
+        return to_binary(top_down)
+
+
+def write_radius(image, line):
+    X_TEXT_LOC = 100
+    Y_TEST_LOC = 100
+    WHITE = (255, 255, 255)
+    thickness = 4
+    radius = curve_radius(line)
+    out = "Radius Of Curve: {:2f}".format(radius)
+    cv2.putText(image, out, (X_TEXT_LOC, Y_TEST_LOC), cv2.FONT_HERSHEY_SIMPLEX, 2, WHITE, thickness)
+    return image
 
 
 class AveragingPipeline(Pipeline):
@@ -49,15 +60,15 @@ class AveragingPipeline(Pipeline):
 
     def highlight_lane(self, forward_view_img: np.ndarray) -> np.ndarray:
         distortion_corrected = self._distortion_correction.transform(forward_view_img)
-        forward_view_edges = threshold(distortion_corrected, thresh=SATURATION_THRESHOLD)
-        top_down = self._perspective_transform.transform(forward_view_edges)
+        top_down = self._perspective_transform.transform(distortion_corrected)
+        top_down_edges = to_binary(top_down)
 
         try:
             if len(self.left_lane_buffer) > 0:
-                left_fit = find_line_from_prior(top_down, self.left_lane_buffer[0])
-                right_fit = find_line_from_prior(top_down, self.right_lane_buffer[0])
+                left_fit = find_line_from_prior(top_down_edges, self.left_lane_buffer[0])
+                right_fit = find_line_from_prior(top_down_edges, self.right_lane_buffer[0])
             else:
-                left_fit, right_fit, _ = find_lines_with_sliding_window(top_down)
+                left_fit, right_fit, _ = find_lines_with_sliding_window(top_down_edges)
             self.left_lane_buffer.appendleft(left_fit)
             self.right_lane_buffer.appendleft(right_fit)
         except LaneNotFoundException:
@@ -69,10 +80,11 @@ class AveragingPipeline(Pipeline):
         left_avg = avg_poly(self.left_lane_buffer)
         right_avg = avg_poly(self.right_lane_buffer)
 
-        top_down_lane_highlight = color_between_lines(top_down.shape, left_avg, right_avg)
+        top_down_lane_highlight = color_between_lines(top_down_edges.shape, left_avg, right_avg)
 
         forward_view_lane_highlight = self._perspective_transform.inverse_transform(top_down_lane_highlight)
-        return cv2.addWeighted(distortion_corrected, 1, forward_view_lane_highlight, 0.3, 0)
+        highlighted = cv2.addWeighted(distortion_corrected, 1, forward_view_lane_highlight, 0.3, 0)
+        return write_radius(highlighted, left_avg)
 
 
 def avg_poly(polys):

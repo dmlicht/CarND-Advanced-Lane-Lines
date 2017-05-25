@@ -32,7 +32,8 @@ The goals / steps of this project are the following:
 [large_transform_example]: ./writeup_images/large_transform_example.png "Large Perspective Transformation Example"
 [with_dots_all]: ./writeup_images/with_dots_all.png "Dots showing transformation points"
 [transformed_all]: ./writeup_images/transformed_all.png "All example images transformed"
-[fit_lines]: ./writeup_images/fit_lines.png "fit lines to our points".
+[fit_lines]: ./writeup_images/fit_lines.png "fit lines to our points"
+[curve_radius]: ./writeup_images/radius_of_curve.png "radius of curve"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -131,13 +132,17 @@ as the points for our new line. Once we have the points, we can fit our line in 
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I calculate the radius of the curve with respect to the center in `find_lines.curve_radius`.
+It seems to be working as the radius gets very large when the road is relatively straight and shrinks during curves in the road.
+
+![curve radius][curve_radius]
+
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
-
-![alt text][image6]
+I implement a the full pipeline in `pipeline.py` in the function `AveragingPipeline.highlight_lane`.
+This function can be passed into `VideoFileClip.fl_image` to annotate the lanes of a whole video.
+It averages the results of previous frames to smooth changes between frames.
 
 ---
 
@@ -145,7 +150,7 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's my [result video](./output_videos/project_video.mp4)
 
 ---
 
