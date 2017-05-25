@@ -77,8 +77,8 @@ To demonstrate this step, I will describe how I apply the distortion correction 
 I explored color transformations and threshold parameters in `thresholding.ipynb`
 ![Images from tuning gradient and color channel thresholding][thresholding]
 
-In my actual pipeline, I ended up using only saturation without combining the results with any gradients or other color channels, because
-saturation on its own appearing to give the clearest signals. The code that is used in my final pipeline is in `threshold.py`.
+In the end I ended up using a combination of thresholded gradientxy magnitude and the color saturation channel. 
+The code that is used in my final pipeline is in `threshold.py`.
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
