@@ -78,7 +78,7 @@ To demonstrate this step, I will describe how I apply the distortion correction 
 and on all the test images before:
 
 ![before][test_image_inputs]
-![after][distortion_correction]
+![after][distortion_correction_many]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
