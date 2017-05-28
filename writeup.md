@@ -26,12 +26,15 @@ The goals / steps of this project are the following:
 [video1]: ./project_video.mp4 "Video"
 
 [undistort]: ./writeup_images/distortion_correction_example.png "Distortion Correction Example"
+[distortion_correction]: ./writeup_images/distortion_correction.png
+[distortion_correction_many]: ./writeup_images/distortion_correction_many.png
 [thresholding]: ./writeup_images/thresholding.png "Thresholding tuning images"
 [large_transform_example]: ./writeup_images/large_transform_example.png "Large Perspective Transformation Example"
 [with_dots_all]: ./writeup_images/with_dots_all.png "Dots showing transformation points"
 [transformed_all]: ./writeup_images/transformed_all.png "All example images transformed"
 [fit_lines]: ./writeup_images/fit_lines.png "fit lines to our points"
 [curve_radius]: ./writeup_images/radius_of_curve.png "radius of curve"
+[test_image_inputs]: ./writeup_images/test_images.png
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -70,7 +73,12 @@ DistortionCorrection can be used as shown below `##Test Distortion Correction On
 #### 1. Provide an example of a distortion-corrected image.
 
 To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![Example of distortion correction][undistort]
+![Example of distortion correction in pipeline][distortion_correction]
+
+and on all the test images before:
+
+![before][test_image_inputs]
+![after][distortion_correction]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
