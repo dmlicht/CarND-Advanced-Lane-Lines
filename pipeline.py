@@ -2,13 +2,16 @@ import cv2
 import numpy as np
 import glob
 from distortion_correction import DistortionCorrection, path_to_image_gen
-from find_lines import find_lines_with_sliding_window, LaneNotFoundException, find_line_from_prior, curve_radius
+from find_lines import find_lines_with_sliding_window, LaneNotFoundException, find_line_from_prior, curve_radius, \
+    camera_center
 from perspective_transform import PerspectiveTransform
 from threshold import to_binary
 from collections import deque
 
 SATURATION_THRESHOLD = (50, 355)
 DEFAULT_LINE_BUFFER_LEN = 5
+WHITE = (255, 255, 255)
+TEXT_THICKNESS = 4
 
 
 class Pipeline:
@@ -39,17 +42,6 @@ class Pipeline:
         distortion_corrected = self._distortion_correction.transform(forward_view_img)
         top_down = self._perspective_transform.transform(distortion_corrected)
         return to_binary(top_down)
-
-
-def write_radius(image, line):
-    X_TEXT_LOC = 100
-    Y_TEST_LOC = 100
-    WHITE = (255, 255, 255)
-    thickness = 4
-    radius = curve_radius(line)
-    out = "Radius Of Curve: {:2f}".format(radius)
-    cv2.putText(image, out, (X_TEXT_LOC, Y_TEST_LOC), cv2.FONT_HERSHEY_SIMPLEX, 2, WHITE, thickness)
-    return image
 
 
 class AveragingPipeline(Pipeline):
@@ -84,7 +76,26 @@ class AveragingPipeline(Pipeline):
 
         forward_view_lane_highlight = self._perspective_transform.inverse_transform(top_down_lane_highlight)
         highlighted = cv2.addWeighted(distortion_corrected, 1, forward_view_lane_highlight, 0.3, 0)
-        return write_radius(highlighted, left_avg)
+        with_radius = write_radius(highlighted, left_avg)
+        with_center = write_center_location(with_radius, left_avg, right_avg)
+        return with_center
+
+
+def write_center_location(image, left_line, right_line, x_loc=100, y_loc=200):
+    center = camera_center(image.shape, left_line, right_line)
+    side_pos = 'left'
+    if center < 0:
+        side_pos = 'right'
+    text_out = "Vehicle is " + str(abs(center)) + ' m ' + side_pos + ' of center.'
+    cv2.putText(image, text_out, (x_loc, y_loc), cv2.FONT_HERSHEY_SIMPLEX, 2, WHITE, TEXT_THICKNESS)
+    return image
+
+
+def write_radius(image, line, x_loc=100, y_loc=100):
+    radius = curve_radius(line)
+    text_out = "Radius Of Curve: {:2f}".format(round(radius, 3))
+    cv2.putText(image, text_out, (x_loc, y_loc), cv2.FONT_HERSHEY_SIMPLEX, 2, WHITE, TEXT_THICKNESS)
+    return image
 
 
 def avg_poly(polys):
@@ -111,3 +122,15 @@ def color_between_lines(shape, left_fit, right_fit):
     # Draw the lane onto the warped blank image
     cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
     return color_warp
+
+
+def run_on_image():
+    import matplotlib.image as mpimg
+
+    img = mpimg.imread('./test_images/test2.jpg')
+    pipeline = AveragingPipeline(img.shape)
+    with_lanes = pipeline.highlight_lane(img)
+
+
+if __name__ == '__main__':
+    run_on_image()

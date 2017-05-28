@@ -9,6 +9,8 @@ N_WINDOWS = 9
 MIN_PX_RESIZE_WINDOW = 50  # Minimum pixels to resize window
 MARGIN = 100
 WINDOW_COLOR = (0, 255, 0)
+YM_PER_PIX = 30 / 720  # meters per pixel in y dimension
+XM_PER_PIX = 3.7 / 700  # meters per pixel in x dimension
 
 Window = namedtuple("Window", "y_low y_high x_low x_high")
 
@@ -120,6 +122,11 @@ def sliding_window(img):
     plt.ylim(720, 0)
 
 
+def calculate_fitx(img_shape, fit):
+    ploty = np.linspace(0, img_shape[0] - 1, img_shape[0])
+    return fit[0] * ploty ** 2 + fit[1] * ploty + fit[2]
+
+
 def fit_poly(img, lane_indices) -> np.ndarray:
     nonzero = img.nonzero()
     nonzero_y = np.array(nonzero[0])
@@ -135,6 +142,15 @@ def curve_radius(lane_fit):
     ploty = np.linspace(0, 719, num=720)
     y_eval = np.max(ploty)
     return ((1 + (2 * lane_fit[0] * y_eval + lane_fit[1]) ** 2) ** 1.5) / np.absolute(2 * lane_fit[0])
+
+
+def camera_center(img_shape, left_fit, right_fit):
+    left_fitx = calculate_fitx(img_shape, left_fit)
+    right_fitx = calculate_fitx(img_shape, right_fit)
+    camera_pos = (left_fitx[-1] + right_fitx[-1]) / 2
+    img_x_center = img_shape[1] / 2
+    center_diff = (camera_pos - img_x_center) * XM_PER_PIX
+    return center_diff
 
 
 def active_pixels_in_window(window: Window, nonzero_x, nonzero_y):

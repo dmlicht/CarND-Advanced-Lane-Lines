@@ -35,6 +35,7 @@ The goals / steps of this project are the following:
 [fit_lines]: ./writeup_images/fit_lines.png "fit lines to our points"
 [curve_radius]: ./writeup_images/radius_of_curve.png "radius of curve"
 [test_image_inputs]: ./writeup_images/test_images.png
+[with_radius_and_position]: ./writeup_images/with_radius_and_position.png
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -78,6 +79,8 @@ To demonstrate this step, I will describe how I apply the distortion correction 
 and on all the test images before:
 
 ![before][test_image_inputs]
+
+after:
 ![after][distortion_correction_many]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
@@ -149,6 +152,9 @@ It seems to be working as the radius gets very large when the road is relatively
 I implement a the full pipeline in `pipeline.py` in the function `AveragingPipeline.highlight_lane`.
 This function can be passed into `VideoFileClip.fl_image` to annotate the lanes of a whole video.
 It averages the results of previous frames to smooth changes between frames.
+
+Here is an example of a final output image with the lane labeled as well as information on curve radius and position in the lane:
+![with radius and position][with_radius_and_position]
 
 ---
 
